@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using AngouriMath;
 using AngouriMath.Extensions;
@@ -24,7 +26,7 @@ namespace nm5
         private readonly int _intervalsCount;
         private readonly double[] _xResultGridNodes;
         private readonly bool _funcType;
-        private readonly string _func;
+        private readonly Entity _func;
         
 
         #endregion
@@ -35,6 +37,22 @@ namespace nm5
 
         #endregion
 
+        public double F(string func,double x, uint der = 0)
+        {
+            Entity localExpr = func;
+            var localDer = der;
+            while (localDer > 0)
+            {
+                localExpr = localExpr.Differentiate("x");
+                localDer -= 1;
+            }
+
+            return (double)(localExpr.Substitute("x", x).EvalNumerical());
+            // return 0;
+            // return _func.Substitute("x",x);
+            //return PolStr.EvalPolStr(_pstr, x, der);
+        }
+        
         public Task(string inputFileName)
         {
             int i;
@@ -69,35 +87,52 @@ namespace nm5
         }
 
         public void Interpolate()
-        {
+        {   
             // https://ru.wikipedia.org/wiki/Интерполяционные_формулы_Ньютона
             // https://ru.wikipedia.org/wiki/Разделённая_разность 
             // Таблица конечных разностей
-            double[,] finiteDifferenceTable = new double[_xGridNodes.Length,_xGridNodes.Length+1];
+            double[,] diffTable = new double[_xGridNodes.Length,_xGridNodes.Length+1];
             for (int i = 0; i < _xGridNodes.Length; i++)
             {
-                finiteDifferenceTable[i, 0] = _xGridNodes[i];
-                finiteDifferenceTable[i, 1] = _yGridNodes[i];
+                diffTable[i, 0] = _xGridNodes[i];
+                diffTable[i, 1] = _yGridNodes[i];
             }
+
             for (int i = 1; i < _xGridNodes.Length; i++) // Бегу по столбцам 
             {
                 for (int j = 0; j < _xGridNodes.Length-1; j++) // Бегу по строкам
                 {
-                    finiteDifferenceTable[j, i+1] = (finiteDifferenceTable[j + 1, i] - finiteDifferenceTable[j, i]);
+                    diffTable[j, i+1] = (diffTable[j + 1, i] - diffTable[j, i]);
                     
                 }
             }
-            // TODO: Написать полином
-            var sb = new StringBuilder();
-            for (int i = 0; i < _xGridNodes.Length; i++)
+            if (_gridType) // Равномерная сетка
             {
-                double elem = (finiteDifferenceTable[0, i + 1] /
-                               (finiteDifferenceTable[i, 0] - finiteDifferenceTable[0, 0]));
-                sb.Append(
-                    $"x^{i}*{(double.IsInfinity(elem) ? 0.0 : elem)}+");
+                var sb = new StringBuilder();
+                Func<int, string> q = i => $"(x - {i})";
+                for (int i = 0; i < _xGridNodes.Length; i++)
+                {
+                    
+                    sb.Append(
+                        $"(({diffTable[0,i+1]})/({i}!)");
+                    for (int j = 0; j < i; j++)
+                    {
+                        sb.Append($"*({q(j)})");
+                    }
+
+                    sb.Append(")+");
+                }
+                Console.Out.WriteLine(sb.ToString().TrimEnd('+')); 
+                Console.Out.WriteLine(F(sb.ToString().TrimEnd('+'),3,0));
             }
+            else // Сетка неравномерная
+            {
+                
+            }
+
             
-            Console.Out.WriteLine(sb.ToString());
+            
+           
         }
     }
 }
