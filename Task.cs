@@ -143,11 +143,12 @@ namespace nm5
 
                         string func = funcSb.ToString().Replace(',', '.');
                         accuracy = 0;
+                        outSb.AppendLine("X\tY");
                         for (int i = 0; i < _xResultGridNodes.Length; i++)
                         {
                             res = F(func, _xResultGridNodes[i]);
                             accuracy += Math.Pow(res,2) - (Math.Pow( F(_func, _xResultGridNodes[i]),2));
-                            outSb.AppendLine($"{_xResultGridNodes[i]} {res}");
+                            outSb.AppendLine($"{_xResultGridNodes[i]}\t{res}");
                         }
 
                         if (_funcType)
